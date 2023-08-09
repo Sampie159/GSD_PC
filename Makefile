@@ -15,7 +15,7 @@ $(OBJDIR):
 	mkdir -p $(OBJDIR)
 
 gsd: $(OBJS)
-	$(CC) $(CFLAGS) $(OBJS) -o $@
+	$(CC) $(CFLAGS) $(OBJS) -o $@ -lm
 
 clean:
 	rm -rf $(OBJDIR) gsd
