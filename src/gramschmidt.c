@@ -11,10 +11,10 @@
 
 #include <math.h>
 #include <pthread.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
-#include <stdint.h>
 
 /* Include polybench common header. */
 #include "polybench.h"
@@ -40,7 +40,7 @@ static void init_array(uint32_t seed, int m, int n);
 
 /* DCE code. Must scan the entire live-out data.
    Can be used also to check the correctness of the output. */
-static void print_array(int m, int n, double *A, double *R, double *Q);
+/* static void print_array(int m, int n, double *A, double *R, double *Q); */
 
 /* Main computational kernel. The whole function will be timed,
    including the call and return. */
@@ -87,7 +87,8 @@ int main(int argc, char **argv) {
   /* Prevent dead-code elimination. All live-out data must be printed
      by the function call in argument. */
   /* polybench_prevent_dce(print_array(m, n, POLYBENCH_ARRAY(A), */
-  /*                                   POLYBENCH_ARRAY(R), POLYBENCH_ARRAY(Q))); */
+  /*                                   POLYBENCH_ARRAY(R), POLYBENCH_ARRAY(Q)));
+   */
 
   /* Be clean. */
   /* POLYBENCH_FREE_ARRAY(A); */
@@ -111,12 +112,13 @@ static void *gramschmidt_par(void *arg) {
 
     for (i = args->inicio; i < args->fim; i++) { // PARALELIZA AQUI
       offsetA = i + M * k;
-      nrm += A[offsetA] *
-             A[offsetA]; // Normal é a soma dos quadrados de cada elemento do vetor
-    } 
+      nrm +=
+          A[offsetA] *
+          A[offsetA]; // Normal é a soma dos quadrados de cada elemento do vetor
+    }
 
     pthread_spin_lock(&sl);
-    nrm_real += nrm;              // BARREIRA E LOCK
+    nrm_real += nrm; // BARREIRA E LOCK
     pthread_spin_unlock(&sl);
 
     offsetR = k + N * k;
@@ -158,8 +160,8 @@ static void definir_programa(Programa *programa, int argc, char *argv[]) {
     switch (opt) {
     case 'd':
       if (strncmp(optarg, "small", 5) == 0) {
-        M = 4000;
-        N = 4800;
+        M = 10000;
+        N = 12000;
       } else if (strncmp(optarg, "medium", 6) == 0) {
         M = 5000;
         N = 6000;
@@ -181,7 +183,7 @@ static void definir_programa(Programa *programa, int argc, char *argv[]) {
         programa->num_threads = aux;
       }
       break;
-      
+
     case 'S':
       programa->seed = atoi(optarg);
       break;
@@ -241,37 +243,38 @@ static void init_array(uint32_t seed, int m, int n) {
   for (i = 0; i < m; i++)
     for (j = 0; j < n; j++) {
       offset = i + M * j;
-      A[offset] = ((float)rand()/(float)RAND_MAX) * 1000;
+      A[offset] = ((float)rand() / (float)RAND_MAX) * 1000;
       Q[offset] = 0.0;
     }
   for (i = 0; i < n; i++)
-    for (j = 0; j < n; j++)
+    for (j = 0; j < n; j++) {
       offset = i + M * j;
       R[offset] = 0.0;
+    }
 }
 
 /* static void print_array(int m, int n, double *A, double *R, double *Q) { */
-  /* int i, j; */
+/* int i, j; */
 
-  /* /1* POLYBENCH_DUMP_START; *1/ */
-  /* /1* POLYBENCH_DUMP_BEGIN("R"); *1/ */
-  /* for (i = 0; i < n; i++) */
-  /*   for (j = 0; j < n; j++) { */
-  /*     if ((i * n + j) % 20 == 0) */
-  /*       fprintf(POLYBENCH_DUMP_TARGET, "\n"); */
-  /*     fprintf(POLYBENCH_DUMP_TARGET, DATA_PRINTF_MODIFIER, R[i][j]); */
-  /*   } */
-  /* /1* POLYBENCH_DUMP_END("R"); *1/ */
+/* /1* POLYBENCH_DUMP_START; *1/ */
+/* /1* POLYBENCH_DUMP_BEGIN("R"); *1/ */
+/* for (i = 0; i < n; i++) */
+/*   for (j = 0; j < n; j++) { */
+/*     if ((i * n + j) % 20 == 0) */
+/*       fprintf(POLYBENCH_DUMP_TARGET, "\n"); */
+/*     fprintf(POLYBENCH_DUMP_TARGET, DATA_PRINTF_MODIFIER, R[i][j]); */
+/*   } */
+/* /1* POLYBENCH_DUMP_END("R"); *1/ */
 
-  /* /1* POLYBENCH_DUMP_BEGIN("Q"); *1/ */
-  /* for (i = 0; i < m; i++) */
-  /*   for (j = 0; j < n; j++) { */
-  /*     if ((i * n + j) % 20 == 0) */
-  /*       fprintf(POLYBENCH_DUMP_TARGET, "\n"); */
-  /*     fprintf(POLYBENCH_DUMP_TARGET, DATA_PRINTF_MODIFIER, Q[i][j]); */
-  /*   } */
-  /* /1* POLYBENCH_DUMP_END("Q"); *1/ */
-  /* /1* POLYBENCH_DUMP_FINISH; *1/ */
+/* /1* POLYBENCH_DUMP_BEGIN("Q"); *1/ */
+/* for (i = 0; i < m; i++) */
+/*   for (j = 0; j < n; j++) { */
+/*     if ((i * n + j) % 20 == 0) */
+/*       fprintf(POLYBENCH_DUMP_TARGET, "\n"); */
+/*     fprintf(POLYBENCH_DUMP_TARGET, DATA_PRINTF_MODIFIER, Q[i][j]); */
+/*   } */
+/* /1* POLYBENCH_DUMP_END("Q"); *1/ */
+/* /1* POLYBENCH_DUMP_FINISH; *1/ */
 /* } */
 
 static void kernel_gramschmidt(int m, int n, double *A, double *R, double *Q) {
