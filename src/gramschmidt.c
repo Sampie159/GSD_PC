@@ -95,20 +95,24 @@ int main(int argc, char **argv) {
   /* POLYBENCH_FREE_ARRAY(R); */
   /* POLYBENCH_FREE_ARRAY(Q); */
 
+  free(A);
+  free(R);
+  free(Q);
+
   return 0;
 }
 
 static double nrm_real;
 
 static void *gramschmidt_par(void *arg) {
-  const Args *args = (Args *)arg;
+  Args *args = (Args *)arg;
   int k, i, j, offsetA, offsetR, offsetQ;
 
   double nrm;
 
   for (k = 0; k < N; k++) { // Lê todos os vetores
     nrm = SCALAR_VAL(0.0);
-    nrm_real = 0.0;
+    nrm_real = SCALAR_VAL(0.0);
 
     for (i = args->inicio; i < args->fim; i++) { // PARALELIZA AQUI
       offsetA = i + M * k;
@@ -151,7 +155,9 @@ static void *gramschmidt_par(void *arg) {
     pthread_barrier_wait(&barreira2);
   }
 
-  pthread_exit(NULL);
+  free(args);
+
+  return NULL;
 }
 
 static void definir_programa(Programa *programa, int argc, char *argv[]) {
@@ -160,8 +166,8 @@ static void definir_programa(Programa *programa, int argc, char *argv[]) {
     switch (opt) {
     case 'd':
       if (strncmp(optarg, "small", 5) == 0) {
-        M = 10000;
-        N = 12000;
+        M = 4000;
+        N = 4800;
       } else if (strncmp(optarg, "medium", 6) == 0) {
         M = 5000;
         N = 6000;
@@ -214,17 +220,22 @@ static void chamar_gs_par(int num_threads) {
   pthread_barrier_init(&barreira2, NULL, num_threads);
   pthread_spin_init(&sl, num_threads);
 
-  pthread_t threads[num_threads];
+  pthread_t threads[num_threads - 1];
   int qt_linha_thread = M / num_threads;
 
-  for (int i = 0; i < num_threads; i++) {
+  for (int i = 0; i < num_threads - 1; i++) {
     Args *args = (Args *)malloc(sizeof(Args));
     args->inicio = qt_linha_thread * i;
-    args->fim = (i == num_threads - 1) ? M : args->inicio + qt_linha_thread;
+    args->fim = args->inicio + qt_linha_thread;
     pthread_create(&threads[i], NULL, gramschmidt_par, (void *)args);
   }
 
-  for (int i = 0; i < num_threads; i++) {
+  Args *args = (Args *)malloc(sizeof(Args));
+  args->inicio = qt_linha_thread * (num_threads - 1);
+  args->fim = M;
+  gramschmidt_par((void *)args);
+
+  for (int i = 0; i < num_threads - 1; i++) {
     pthread_join(threads[i], NULL);
   }
 
@@ -308,7 +319,7 @@ static void kernel_gramschmidt(int m, int n, double *A, double *R, double *Q) {
         offsetA = i + M * j;
         offsetQ = i + M * k;
         offsetR = k + M * j;
-        A[offsetA] = A[offsetA] - Q[offsetQ] * R[offsetR];
+        A[offsetA] -= Q[offsetQ] * R[offsetR];
       }
     }
   }

@@ -1,5 +1,5 @@
 CC = gcc
-CFLAGS = -Wall -Wextra -Wpedantic -g -std=gnu17 -O3
+CFLAGS = -Wall -Wextra -Wpedantic -g -std=gnu17 -O3 -pipe -march=native
 
 SRCS = $(wildcard $(SRCDIR)/*.c)
 SRCDIR = src
@@ -21,4 +21,4 @@ gsd_mpi: src_mpi/main.c
 	mpicc $(CFLAGS) $^ -o $@
 
 clean:
-	rm -rf $(OBJDIR) gsd
+	rm -rf $(OBJDIR) gsd gsd_mpi
