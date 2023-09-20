@@ -18,7 +18,7 @@ gsd: $(OBJS)
 	$(CC) $(CFLAGS) $(OBJS) -o $@ -lm
 
 gsd_mpi: src_mpi/main.c
-	mpicc $(CFLAGS) $^ -o $@
+	mpicc $(CFLAGS) $^ -o $@ -lm
 
 clean:
 	rm -rf $(OBJDIR) gsd gsd_mpi

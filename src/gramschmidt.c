@@ -30,7 +30,6 @@ typedef struct {
 typedef struct {
   int num_threads;
   uint32_t seed;
-  char tamanho;
 } Programa;
 
 static int M, N;
@@ -46,12 +45,13 @@ static void init_array(uint32_t seed, int m, int n);
    including the call and return. */
 /* QR Decomposition with Modified Gram Schmidt:
  http://www.inf.ethz.ch/personal/gander/ */
-static void kernel_gramschmidt(int m, int n, double *A, double *R, double *Q);
+// static void kernel_gramschmidt(int m, int n, double *A, double *R, double
+// *Q);
 
 static void definir_programa(Programa *programa, int argc, char *argv[]);
 static void print_ajuda(void);
 static void *gramschmidt_par(void *arg);
-static void chamar_gs_par(int num_threads);
+static void gram_schmidt(int num_threads);
 
 static pthread_spinlock_t sl;
 static pthread_barrier_t barreira;
@@ -73,12 +73,13 @@ int main(int argc, char **argv) {
   /* Start timer. */
   /* polybench_start_instruments; */
 
-  if (programa.num_threads == 1) {
-    /* Run kernel. */
-    kernel_gramschmidt(m, n, A, R, Q);
-  } else {
-    chamar_gs_par(programa.num_threads);
-  }
+  // if (programa.num_threads == 1 && 0) {
+  //   /* Run kernel. */
+  //   kernel_gramschmidt(m, n, A, R, Q);
+  // } else {
+  //   gram_schmidt(programa.num_threads);
+  // }
+  gram_schmidt(programa.num_threads);
 
   /* Stop and print timer. */
   /* polybench_stop_instruments; */
@@ -108,6 +109,8 @@ static void *gramschmidt_par(void *arg) {
   Args *args = (Args *)arg;
   int k, i, j, offsetA, offsetR, offsetQ;
 
+  printf("inicio: %d, fim: %d\n", args->inicio, args->fim);
+
   double nrm;
 
   for (k = 0; k < N; k++) { // Lê todos os vetores
@@ -130,7 +133,6 @@ static void *gramschmidt_par(void *arg) {
     pthread_barrier_wait(&barreira);
     for (i = args->inicio; i < args->fim; i++) { // PARALELIZA AQUI
       offsetA = i + M * k;
-      offsetR = k + N * k;
       Q[offsetA] = A[offsetA] / R[offsetR];
     }
 
@@ -149,7 +151,7 @@ static void *gramschmidt_par(void *arg) {
         offsetA = i + M * j;
         offsetQ = i + M * k;
         offsetR = k + N * j;
-        A[offsetA] = A[offsetA] - Q[offsetQ] * R[offsetR];
+        A[offsetA] -= Q[offsetQ] * R[offsetR];
       }
     }
     pthread_barrier_wait(&barreira2);
@@ -215,7 +217,7 @@ static void print_ajuda(void) {
       "ajuda.\n");
 }
 
-static void chamar_gs_par(int num_threads) {
+static void gram_schmidt(int num_threads) {
   pthread_barrier_init(&barreira, NULL, num_threads);
   pthread_barrier_init(&barreira2, NULL, num_threads);
   pthread_spin_init(&sl, num_threads);
@@ -288,40 +290,41 @@ static void init_array(uint32_t seed, int m, int n) {
 /* /1* POLYBENCH_DUMP_FINISH; *1/ */
 /* } */
 
-static void kernel_gramschmidt(int m, int n, double *A, double *R, double *Q) {
-  int i, j, k, offsetA, offsetR, offsetQ;
-
-  DATA_TYPE nrm;
-
-#pragma scop
-  for (k = 0; k < _PB_N; k++) {
-    nrm = SCALAR_VAL(0.0);
-    for (i = 0; i < _PB_M; i++) {
-      offsetA = i + M * k;
-      nrm += A[offsetA] * A[offsetA];
-    }
-    R[k + M * k] = SQRT_FUN(nrm);
-    for (i = 0; i < _PB_M; i++) {
-      offsetA = i + M * k;
-      offsetR = k + M * k;
-      Q[offsetA] = A[offsetA] / R[offsetR];
-    }
-    for (j = k + 1; j < _PB_N; j++) {
-      offsetR = k + M * j;
-      R[offsetR] = SCALAR_VAL(0.0);
-      for (i = 0; i < _PB_M; i++) {
-        offsetA = i + M * j;
-        offsetQ = i + M * k;
-        offsetR = k + M * j;
-        R[offsetR] += Q[offsetQ] * A[offsetA];
-      }
-      for (i = 0; i < _PB_M; i++) {
-        offsetA = i + M * j;
-        offsetQ = i + M * k;
-        offsetR = k + M * j;
-        A[offsetA] -= Q[offsetQ] * R[offsetR];
-      }
-    }
-  }
-#pragma endscop
-}
+// static void kernel_gramschmidt(int m, int n, double *A, double *R, double *Q)
+// {
+//   int i, j, k, offsetA, offsetR, offsetQ;
+//
+//   DATA_TYPE nrm;
+//
+// #pragma scop
+//   for (k = 0; k < _PB_N; k++) {
+//     nrm = SCALAR_VAL(0.0);
+//     for (i = 0; i < _PB_M; i++) {
+//       offsetA = i + M * k;
+//       nrm += A[offsetA] * A[offsetA];
+//     }
+//     R[k + M * k] = SQRT_FUN(nrm);
+//     for (i = 0; i < _PB_M; i++) {
+//       offsetA = i + M * k;
+//       offsetR = k + M * k;
+//       Q[offsetA] = A[offsetA] / R[offsetR];
+//     }
+//     for (j = k + 1; j < _PB_N; j++) {
+//       offsetR = k + M * j;
+//       R[offsetR] = SCALAR_VAL(0.0);
+//       for (i = 0; i < _PB_M; i++) {
+//         offsetA = i + M * j;
+//         offsetQ = i + M * k;
+//         offsetR = k + M * j;
+//         R[offsetR] += Q[offsetQ] * A[offsetA];
+//       }
+//       for (i = 0; i < _PB_M; i++) {
+//         offsetA = i + M * j;
+//         offsetQ = i + M * k;
+//         offsetR = k + M * j;
+//         A[offsetA] -= Q[offsetQ] * R[offsetR];
+//       }
+//     }
+//   }
+// #pragma endscop
+// }
