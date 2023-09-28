@@ -1,0 +1,42 @@
+[
+  {
+    "arguments": [
+      "/usr/bin/gcc",
+      "-Wall",
+      "-Wextra",
+      "-Wpedantic",
+      "-g",
+      "-std=gnu17",
+      "-O3",
+      "-pipe",
+      "-march=native",
+      "-c",
+      "-o",
+      "obj/polybench.o",
+      "src/polybench.c"
+    ],
+    "directory": "/home/sampie/faculdade/GSD_PC",
+    "file": "/home/sampie/faculdade/GSD_PC/src/polybench.c",
+    "output": "/home/sampie/faculdade/GSD_PC/obj/polybench.o"
+  },
+  {
+    "arguments": [
+      "/usr/bin/gcc",
+      "-c",
+      "-Wall",
+      "-Wextra",
+      "-Wpedantic",
+      "-g",
+      "-std=gnu17",
+      "-O3",
+      "-pipe",
+      "-march=native",
+      "-o",
+      "gsd_mpi",
+      "src_mpi/main.c"
+    ],
+    "directory": "/home/sampie/faculdade/GSD_PC",
+    "file": "/home/sampie/faculdade/GSD_PC/src_mpi/main.c",
+    "output": "/home/sampie/faculdade/GSD_PC/gsd_mpi"
+  }
+]

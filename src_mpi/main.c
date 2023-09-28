@@ -1,5 +1,5 @@
 #include <math.h>
-#include <mpi/mpi.h>
+#include <mpi.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -21,6 +21,7 @@ static void ler_args(int *argc, char ***argv);
 static void preencher_matriz(void);
 static void print_ajuda(void);
 static void atualizar_matrizes(void);
+static void escrever_matriz(void);
 
 int
 main(int argc, char **argv) {
@@ -43,6 +44,10 @@ main(int argc, char **argv) {
   gramschmidt_mpi(&inicio, &fim);
 
   MPI_Finalize();
+
+  if (rank_global == 0) {
+    escrever_matriz();
+  }
 
   return 0;
 }
@@ -177,4 +182,23 @@ atualizar_matrizes(void) {
   }
 
   MPI_Bcast(A, M * N, MPI_DOUBLE, tamanho_global - 1, MPI_COMM_WORLD);
+}
+
+static void
+escrever_matriz(void) {
+  FILE *arq = fopen("saida.txt", "w");
+  if (arq == NULL) {
+    perror("Erro ao abrir arquivo de saída");
+    exit(EXIT_FAILURE);
+  }
+
+  fprintf(arq, "%d %d\n", M, N);
+  for (int i = 0; i < M; i++) {
+    for (int j = 0; j < N - 1; j++) {
+      fprintf(arq, "%.2f ", A[i + M * j]);
+    }
+    fprintf(arq, "%.2f\n", A[i + M * (N - 1)]);
+  }
+
+  fclose(arq);
 }

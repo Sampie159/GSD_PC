@@ -3,3 +3,6 @@ obj
 gsd_mpi
 perf.data.old
 perf.data
+saida.txt
+saida_1.txt
+.cache/clangd/index
