@@ -1,5 +1,9 @@
 #include <math.h>
-#include <mpi.h>
+#ifdef _OPENMPI
+  #include <mpi.h>
+#else
+  #include <mpi/mpi.h>
+#endif
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>

@@ -6,19 +6,20 @@ SRCDIR = src
 OBJS = $(patsubst $(SRCDIR)/%.c, $(OBJDIR)/%.o, $(SRCS))
 OBJDIR = obj
 
-all: gsd gsd_mpi
-
 $(OBJDIR)/%.o: $(SRCDIR)/%.c $(OBJDIR)
-	$(CC) $(CFLAGS) -c $< -o $@
+	$(CC) $(CFLAGS) -c $< -o $@ -fopenmp
 
 $(OBJDIR):
-	mkdir -p $(OBJDIR)
+	mkdir -p $(OBJDIR) 
 
 gsd: $(OBJS)
-	$(CC) $(CFLAGS) $(OBJS) -o $@ -lm
+	$(CC) $(CFLAGS) $(OBJS) -o $@ -lm -fopenmp
 
 gsd_mpi: src_mpi/main.c
 	mpicc $(CFLAGS) $^ -o $@ -lm
+
+gsd_ompi: src_mpi/main.c
+	mpicc $(CFLAGS) $^ -o $@ -lm -D_OPENMPI
 
 clean:
 	rm -rf $(OBJDIR) gsd gsd_mpi
