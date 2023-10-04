@@ -26,6 +26,7 @@
 typedef struct {
   int inicio;
   int fim;
+  int id;
 } Args;
 
 typedef struct {
@@ -42,6 +43,7 @@ static void  definir_programa(Programa *programa, int argc, char *argv[]);
 static void  print_ajuda(void);
 static void *gramschmidt_par(void *arg);
 static void  gram_schmidt(int num_threads);
+static void  printar_matriz(void);
 
 static pthread_spinlock_t lock;
 static pthread_barrier_t  barreira;
@@ -69,9 +71,7 @@ main(int argc, char **argv) {
 
   printf("Tempo: %f\n", fim - inicio);
 
-  free(A);
-  free(R);
-  free(Q);
+  printar_matriz();
 
   return 0;
 }
@@ -98,10 +98,10 @@ gramschmidt_par(void *arg) {
       pthread_spin_unlock(&lock);
     }
 
+    pthread_barrier_wait(&barreira);
+
     offsetR    = k + N * k;
     R[offsetR] = SQRT_FUN(nrm); // R[k][k] guarda a raiz da normal
-
-    pthread_barrier_wait(&barreira);
 
     for (i = args->inicio; i < args->fim; i++) { // PARALELIZA AQUI
       offsetA    = i + M * k;
@@ -144,8 +144,8 @@ definir_programa(Programa *programa, int argc, char *argv[]) {
     switch (opt) {
     case 'd':
       if (strncmp(optarg, "small", 5) == 0) {
-        M = 400;
-        N = 480;
+        M = 40;
+        N = 48;
       } else if (strncmp(optarg, "medium", 6) == 0) {
         M = 5000;
         N = 6000;
@@ -196,7 +196,7 @@ gram_schmidt(int num_threads) {
   pthread_barrier_init(&barreira2, NULL, num_threads);
   pthread_barrier_init(&barreira3, NULL, num_threads);
   pthread_barrier_init(&barreira4, NULL, num_threads);
-  pthread_spin_init(&lock, 0);
+  pthread_spin_init(&lock, PTHREAD_PROCESS_PRIVATE);
 
   pthread_t threads[num_threads - 1];
   int       qt_linha_thread = M / num_threads;
@@ -205,13 +205,15 @@ gram_schmidt(int num_threads) {
     Args *args   = (Args *) malloc(sizeof(Args));
     args->inicio = qt_linha_thread * i;
     args->fim    = args->inicio + qt_linha_thread;
+    args->id     = i;
     pthread_create(&threads[i], NULL, gramschmidt_par, (void *) args);
   }
 
   Args *args   = (Args *) malloc(sizeof(Args));
   args->inicio = qt_linha_thread * (num_threads - 1);
   args->fim    = M;
-  gramschmidt_par((void *) args);
+  args->id     = num_threads - 1;
+  gramschmidt_par(args);
 
   for (int i = 0; i < num_threads - 1; i++) {
     pthread_join(threads[i], NULL);
@@ -245,4 +247,18 @@ init_array(uint32_t seed, int m, int n) {
       R[offset] = 0.0;
     }
   }
+}
+
+static void
+printar_matriz(void) {
+  FILE *arq = fopen("matriz.txt", "w");
+
+  for (int i = 0; i < M; i++) {
+    for (int j = 0; j < N; j++) {
+      fprintf(arq, "%f ", A[i + M * j]);
+    }
+  }
+  fprintf(arq, "\n\n");
+
+  fclose(arq);
 }
