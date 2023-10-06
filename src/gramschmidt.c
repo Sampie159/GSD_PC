@@ -46,10 +46,11 @@ static void  gram_schmidt(int num_threads);
 static void  printar_matriz(void);
 
 static pthread_spinlock_t lock;
+static pthread_spinlock_t lock2;
+static pthread_spinlock_t lock3;
 static pthread_barrier_t  barreira;
 static pthread_barrier_t  barreira2;
 static pthread_barrier_t  barreira3;
-static pthread_barrier_t  barreira4;
 
 static double *A, *R, *Q;
 
@@ -76,32 +77,36 @@ main(int argc, char **argv) {
   return 0;
 }
 
-static double nrm;
+static double nrm_real;
 
 static void *
 gramschmidt_par(void *arg) {
-  Args *args = (Args *) arg;
-  int   k, i, j, offsetA, offsetR, offsetQ;
+  Args  *args = (Args *) arg;
+  int    k, i, j, offsetA, offsetR, offsetQ;
+  double nrm;
 
   printf("inicio: %d, fim: %d\n", args->inicio, args->fim);
 
   for (k = 0; k < N; k++) { // Lê todos os vetores
-    nrm = SCALAR_VAL(0.0);
+    nrm_real = SCALAR_VAL(0.0);
+    nrm      = SCALAR_VAL(0.0);
 
     pthread_barrier_wait(&barreira2);
 
     for (i = args->inicio; i < args->fim; i++) { // PARALELIZA AQUI
       offsetA = i + M * k;
-      pthread_spin_lock(&lock);
       nrm += A[offsetA] * A[offsetA]; // Normal é a soma dos quadrados de cada
                                       // elemento do vetor
-      pthread_spin_unlock(&lock);
     }
+
+    pthread_spin_lock(&lock);
+    nrm_real += nrm;
+    pthread_spin_unlock(&lock);
 
     pthread_barrier_wait(&barreira);
 
     offsetR    = k + N * k;
-    R[offsetR] = SQRT_FUN(nrm); // R[k][k] guarda a raiz da normal
+    R[offsetR] = SQRT_FUN(nrm_real); // R[k][k] guarda a raiz da normal
 
     for (i = args->inicio; i < args->fim; i++) { // PARALELIZA AQUI
       offsetA    = i + M * k;
@@ -109,18 +114,18 @@ gramschmidt_par(void *arg) {
     }
 
     for (j = k + 1; j < N; j++) {
-      offsetR    = k + N * j;
-      R[offsetR] = SCALAR_VAL(0.0);
-
-      pthread_barrier_wait(&barreira4);
+      offsetR            = k + N * j;
+      double r_no_offset = SCALAR_VAL(0.0);
 
       for (i = args->inicio; i < args->fim; i++) { // PARALELIZA AQUI
-        offsetA = i + M * j;
-        offsetQ = i + M * k;
-        pthread_spin_lock(&lock);
-        R[offsetR] += Q[offsetQ] * A[offsetA];
-        pthread_spin_unlock(&lock);
+        offsetA      = i + M * j;
+        offsetQ      = i + M * k;
+        r_no_offset += Q[offsetQ] * A[offsetA];
       }
+
+      pthread_spin_lock(&lock2);
+      R[offsetR] += r_no_offset;
+      pthread_spin_unlock(&lock2);
 
       pthread_barrier_wait(&barreira3);
 
@@ -195,8 +200,9 @@ gram_schmidt(int num_threads) {
   pthread_barrier_init(&barreira, NULL, num_threads);
   pthread_barrier_init(&barreira2, NULL, num_threads);
   pthread_barrier_init(&barreira3, NULL, num_threads);
-  pthread_barrier_init(&barreira4, NULL, num_threads);
   pthread_spin_init(&lock, PTHREAD_PROCESS_PRIVATE);
+  pthread_spin_init(&lock2, PTHREAD_PROCESS_PRIVATE);
+  pthread_spin_init(&lock3, PTHREAD_PROCESS_PRIVATE);
 
   pthread_t threads[num_threads - 1];
   int       qt_linha_thread = M / num_threads;
@@ -222,8 +228,9 @@ gram_schmidt(int num_threads) {
   pthread_barrier_destroy(&barreira);
   pthread_barrier_destroy(&barreira2);
   pthread_barrier_destroy(&barreira3);
-  pthread_barrier_destroy(&barreira4);
   pthread_spin_destroy(&lock);
+  pthread_spin_destroy(&lock2);
+  pthread_spin_destroy(&lock3);
 }
 
 static void
@@ -257,8 +264,9 @@ printar_matriz(void) {
     for (int j = 0; j < N; j++) {
       fprintf(arq, "%f ", A[i + M * j]);
     }
+    fprintf(arq, "\n");
   }
-  fprintf(arq, "\n\n");
+  fprintf(arq, "\n");
 
   fclose(arq);
 }
