@@ -85,8 +85,6 @@ gramschmidt_par(void *arg) {
   int    k, i, j, offsetA, offsetR, offsetQ;
   double nrm;
 
-  printf("inicio: %d, fim: %d\n", args->inicio, args->fim);
-
   for (k = 0; k < N; k++) { // Lê todos os vetores
     nrm_real = SCALAR_VAL(0.0);
     nrm      = SCALAR_VAL(0.0);
@@ -149,14 +147,14 @@ definir_programa(Programa *programa, int argc, char *argv[]) {
     switch (opt) {
     case 'd':
       if (strncmp(optarg, "small", 5) == 0) {
-        M = 40;
-        N = 48;
+        M = 7000;
+        N = 8400;
       } else if (strncmp(optarg, "medium", 6) == 0) {
-        M = 5000;
-        N = 6000;
+        M = 8000;
+        N = 9600;
       } else if (strncmp(optarg, "large", 5) == 0) {
-        M = 6000;
-        N = 7200;
+        M = 9000;
+        N = 10800;
       } else {
         printf("Tamanho não suportado, use: small, medium ou large\n");
         exit(EXIT_FAILURE);
