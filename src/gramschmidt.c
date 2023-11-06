@@ -111,23 +111,23 @@ gramschmidt_par(void *arg) {
       Q[offsetA] = A[offsetA] / R[offsetR];
     }
 
-    for (j = k + 1; j < N; j++) {
-      offsetR            = k + N * j;
-      double r_no_offset = SCALAR_VAL(0.0);
+    int inicio2, fim2;
 
-      for (i = args->inicio; i < args->fim; i++) { // PARALELIZA AQUI
-        offsetA      = i + M * j;
-        offsetQ      = i + M * k;
-        r_no_offset += Q[offsetQ] * A[offsetA];
+    if (args->id == 0) {
+      inicio2 = k + 1;
+      fim2    = inicio2 + (N - k - 1) / programa.num_threads;
+    }
+
+    for (j = k + 1; j < N; j++) {
+      offsetR = k + N * j;
+
+      for (i = 0; i < M; i++) { // PARALELIZA AQUI
+        offsetA     = i + M * j;
+        offsetQ     = i + M * k;
+        R[offsetR] += Q[offsetQ] * A[offsetA];
       }
 
-      pthread_spin_lock(&lock2);
-      R[offsetR] += r_no_offset;
-      pthread_spin_unlock(&lock2);
-
-      pthread_barrier_wait(&barreira3);
-
-      for (i = args->inicio; i < args->fim; i++) { // PARELILZA AQUI
+      for (i = 0; i < M; i++) { // PARELILZA AQUI
         offsetA     = i + M * j;
         offsetQ     = i + M * k;
         A[offsetA] -= Q[offsetQ] * R[offsetR];
